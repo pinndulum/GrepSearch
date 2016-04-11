@@ -18,10 +18,10 @@ Other than these noted elements the entirety of this work is my own.
 This S. Alexandrakis CheckedComboBox project was extremely useful to produce the effect of a combo box with file extensions that could be chosen via a check box.
 
 Furthermore I used this project to implement a way to:
- o- uncheck the default extensions "*.*" when any other extension is chosen.
- o- when all other extensions are unchecked the default extension gets checked again.
- o- when the default extension is checked all other checked extensions are un-checked.
- o- if no other extensions are checked the default extension can not be un-checked.
+- uncheck the default extensions "*.*" when any other extension is chosen.
+- when all other extensions are unchecked the default extension gets checked again.
+- when the default extension is checked all other checked extensions are un-checked.
+- if no other extensions are checked the default extension can not be un-checked.
 
 The heavy lifting of this project is accomplished in the GrepSearch.GrepWorker class where a BackgroundWorker scans and fires events that indicate progress.
 
@@ -35,13 +35,13 @@ GrepCanceled: fires when the background worker has been cancelled prior to compl
 GrepComplete: fires when the background worker has completed on its own.
 
 To begin a grep search: instantiate a GrepWorker class object and pass the following parameters to its Start method.
-1. directory: the directory to begin searching from.
-2. filePattern: a windows style file name pattern with optional wildcards. (all files "*.*" for WinGrep)
-3. extensions: a list of extensions in the form "*.ext", null or "*.*" means all extensions.
-4. regex: the regular expression pattern to find matches for each line in the file being scanned.
-5. isRecursive: true to search subdirectories false to search top directory only.
-6: ignoreCase: true for case insensitive searches, false to exactly match case.
-7. fileNameOnly: true to return file name without line match data (stops scanning file at first matching line). false to return every matching line in the file.
+  1. directory: the directory to begin searching from.
+  2. filePattern: a windows style file name pattern with optional wildcards. (all files "*.*" for WinGrep)
+  3. extensions: a list of extensions in the form "*.ext", null or "*.*" means all extensions.
+  4. regex: the regular expression pattern to find matches for each line in the file being scanned.
+  5. isRecursive: true to search subdirectories false to search top directory only.
+  6. ignoreCase: true for case insensitive searches, false to exactly match case.
+  7. fileNameOnly: true to return file name without line match data (stops scanning file at first matching line). false to return every matching line in the file.
 
 Besides these parameters each UI also has switches for showing line numbers and counting lines. And as G. Anescu had done, these switches are cancelled out by the fileNamesOnly parameter.
 
