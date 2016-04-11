@@ -35,13 +35,13 @@ GrepCanceled: fires when the background worker has been cancelled prior to compl
 GrepComplete: fires when the background worker has completed on its own.
 
 To begin a grep search: instantiate a GrepWorker class object and pass the following parameters to its Start method.
-# directory: the directory to begin searching from.
-# filePattern: a windows style file name pattern with optional wildcards. (all files "*.*" for WinGrep)
-# extensions: a list of extensions in the form "*.ext", null or "*.*" means all extensions.
-# regex: the regular expression pattern to find matches for each line in the file being scanned.
-# isRecursive: true to search subdirectories false to search top directory only.
-# ignoreCase: true for case insensitive searches, false to exactly match case.
-# fileNameOnly: true to return file name without line match data (stops scanning file at first matching line). false to return every matching line in the file.
+1. directory: the directory to begin searching from.
+2. filePattern: a windows style file name pattern with optional wildcards. (all files "*.*" for WinGrep)
+3. extensions: a list of extensions in the form "*.ext", null or "*.*" means all extensions.
+4. regex: the regular expression pattern to find matches for each line in the file being scanned.
+5. isRecursive: true to search subdirectories false to search top directory only.
+6: ignoreCase: true for case insensitive searches, false to exactly match case.
+7. fileNameOnly: true to return file name without line match data (stops scanning file at first matching line). false to return every matching line in the file.
 
 Besides these parameters each UI also has switches for showing line numbers and counting lines. And as G. Anescu had done, these switches are cancelled out by the fileNamesOnly parameter.
 
