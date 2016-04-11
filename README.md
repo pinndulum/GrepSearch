@@ -1,6 +1,6 @@
 # GrepSearch
 
-Unix(ish) globally search a regular expression and print, with windows forms and command line console user interfaces.
+A unix(ish) globally search a regular expression and print, with windows forms and command line console user interfaces.
 
 Credit to George Anescu and Stelios Alexandrakis who contributed the following articles.
 - [A C# Grep Application by George Anescu, 11 Mar 2003](http://www.codeproject.com/Articles/1485/A-C-Grep-Application)
