@@ -6,7 +6,7 @@ Credit to George Anescu and Stelios Alexandrakis who contributed the following a
 - [A C# Grep Application by George Anescu, 11 Mar 2003](http://www.codeproject.com/Articles/1485/A-C-Grep-Application)
 - [A ComboBox with a CheckedListBox as a Dropdown by Stelios Alexandrakis, 22 Nov 2008](http://www.codeproject.com/Articles/31105/A-ComboBox-with-a-CheckedListBox-as-a-Dropdown)
 
-As well as R. Lopes' for his CommandLine.Utility.Arguments class: "application arguments interpreter" also used by G. Anescu in his ConsGrep project.
+As well as R. Lopes for his CommandLine.Utility.Arguments class: "application arguments interpreter" also used by G. Anescu in his ConsGrep project.
 
 From G. Anescu contribution the only part that remains of his original project is the form layout and some of the variable\class names. Likewise I also kept the console applications command line argument parameters unchanged.
 His project failed to execute because cross threaded access to the win forms controls.
