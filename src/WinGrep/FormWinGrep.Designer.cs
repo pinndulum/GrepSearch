@@ -39,6 +39,7 @@
             this.btnSearch = new System.Windows.Forms.Button();
             this.lblDir = new System.Windows.Forms.Label();
             this.lbResults = new System.Windows.Forms.ListBox();
+            this.checkedComboBox1 = new CheckComboBoxControl.CheckedComboBox();
             this.ckJustFiles = new System.Windows.Forms.CheckBox();
             this.ckIgnoreCase = new System.Windows.Forms.CheckBox();
             this.ckLineNumbers = new System.Windows.Forms.CheckBox();
@@ -46,7 +47,6 @@
             this.txtSearchText = new System.Windows.Forms.TextBox();
             this.ckCountLines = new System.Windows.Forms.CheckBox();
             this.txtDir = new System.Windows.Forms.TextBox();
-            this.checkedComboBox1 = new CheckComboBoxControl.CheckedComboBox();
             this.SuspendLayout();
             // 
             // lblCurFile
@@ -144,6 +144,23 @@
             this.lbResults.Name = "lbResults";
             this.lbResults.Size = new System.Drawing.Size(249, 147);
             this.lbResults.TabIndex = 18;
+            this.lbResults.Visible = false;
+            // 
+            // checkedComboBox1
+            // 
+            this.checkedComboBox1.CheckOnClick = true;
+            this.checkedComboBox1.DisplayMember = "Name";
+            this.checkedComboBox1.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
+            this.checkedComboBox1.DropDownHeight = 1;
+            this.checkedComboBox1.FormattingEnabled = true;
+            this.checkedComboBox1.IntegralHeight = false;
+            this.checkedComboBox1.Location = new System.Drawing.Point(11, 68);
+            this.checkedComboBox1.Name = "checkedComboBox1";
+            this.checkedComboBox1.Size = new System.Drawing.Size(186, 21);
+            this.checkedComboBox1.TabIndex = 5;
+            this.checkedComboBox1.ValueSeparator = ", ";
+            this.checkedComboBox1.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.checkedComboBox1_ItemCheck);
+            this.checkedComboBox1.DropDown += new System.EventHandler(this.checkedComboBox1_DropDown);
             // 
             // ckJustFiles
             // 
@@ -226,22 +243,6 @@
             this.txtDir.Text = global::WinGrep.Properties.Settings.Default.SearchDirectory;
             this.txtDir.TextChanged += new System.EventHandler(this.tb_TextChanged_Verify);
             this.txtDir.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tb_KeyDown_Search);
-            // 
-            // checkedComboBox1
-            // 
-            this.checkedComboBox1.CheckOnClick = true;
-            this.checkedComboBox1.DisplayMember = "Name";
-            this.checkedComboBox1.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
-            this.checkedComboBox1.DropDownHeight = 1;
-            this.checkedComboBox1.FormattingEnabled = true;
-            this.checkedComboBox1.IntegralHeight = false;
-            this.checkedComboBox1.Location = new System.Drawing.Point(11, 68);
-            this.checkedComboBox1.Name = "checkedComboBox1";
-            this.checkedComboBox1.Size = new System.Drawing.Size(186, 21);
-            this.checkedComboBox1.TabIndex = 5;
-            this.checkedComboBox1.ValueSeparator = ", ";
-            this.checkedComboBox1.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.checkedComboBox1_ItemCheck);
-            this.checkedComboBox1.DropDown += new System.EventHandler(this.checkedComboBox1_DropDown);
             // 
             // FormWinGrep
             // 
