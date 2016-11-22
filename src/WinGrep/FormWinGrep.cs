@@ -7,17 +7,42 @@ using System.Windows.Forms;
 
 namespace WinGrep
 {
+    public enum SearchState { Idle, Searching }
+
     public partial class FormWinGrep : Form
     {
+        private class StringConst
+        {
+            public const string Search = "Search";
+            public const string Cancel = "Cancel";
+        }
+
         private readonly GrepWorker _grepWorker = new GrepWorker();
 
         private object _updatelock = new object();
         private int _totalFileMatches;
         private int _totalLineMatches;
 
+        protected SearchState SearchState { get { return GetText(btnSearch) == StringConst.Search ? SearchState.Idle : SearchState.Searching; } }
+
         public FormWinGrep()
         {
             InitializeComponent();
+
+            btnSearch.Enabled = !string.IsNullOrWhiteSpace(txtDir.Text) && !string.IsNullOrWhiteSpace(txtSearchText.Text);
+            if (btnSearch.Enabled)
+            {
+                BuildCheckedComboBoxItems(checkedComboBox1);
+                var extensions = (Properties.Settings.Default.FileExtensions ?? string.Empty).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+                if (extensions.Any())
+                {
+                    EnsureExtensionFiltersExist(checkedComboBox1);
+                    var selection = checkedComboBox1.Items.OfType<CheckComboBoxControl.CheckedComboBoxItem>().Select((x, i) => new { Index = i, Name = x.Name }).Where(x => extensions.Contains(x.Name));
+                    foreach (var ext in selection.ToArray())
+                        checkedComboBox1.SetItemChecked(ext.Index, true);
+                }
+            }
+
             _grepWorker.GrepFileChanged += GrepFileChanged;
             _grepWorker.GrepFileHasMatch += _grepWorker_GrepFileHasMatch;
             _grepWorker.GrepResult += GrepResult;
@@ -28,20 +53,22 @@ namespace WinGrep
         }
 
         #region Thread Safe Control Delegates
-        delegate void SetCursorDelegate(FormWinGrep form, Cursor cursor);
+        delegate void SetCursorDelegate(Control c, Cursor cursor);
         delegate void AppendTextDelegate(TextBox tb, string text);
-        delegate void SetTextDelegate(TextBox tb, string text);
-        delegate string GetTextDelegate(TextBox tb);
+        delegate void SetTextDelegate(Control c, string text);
+        delegate string GetTextDelegate(Control c);
         delegate bool GetCheckedDelegate(CheckBox cb);
+        delegate void ClearListBoxDelegate(ListBox lb);
+        delegate void AddListBoxItemDelegate(ListBox lb, object item);
 
-        private void SetCursor(FormWinGrep form, Cursor cursor)
+        private void SetCursor(Control c, Cursor cursor)
         {
-            if (form.InvokeRequired)
+            if (c.InvokeRequired)
             {
-                form.Invoke(new SetCursorDelegate(SetCursor), form, cursor);
+                c.Invoke(new SetCursorDelegate(SetCursor), c, cursor);
                 return;
             }
-            form.Cursor = cursor;
+            c.Cursor = cursor;
         }
 
         private void AppendText(TextBox tb, string text)
@@ -57,21 +84,21 @@ namespace WinGrep
             tb.ScrollToCaret();
         }
 
-        private void SetText(TextBox tb, string text)
+        private void SetText(Control c, string text)
         {
-            if (tb.InvokeRequired)
+            if (c.InvokeRequired)
             {
-                tb.Invoke(new SetTextDelegate(SetText), tb, text);
+                c.Invoke(new SetTextDelegate(SetText), c, text);
                 return;
             }
-            tb.Text = text;
+            c.Text = text;
         }
 
-        private string GetText(TextBox tb)
+        private string GetText(Control c)
         {
-            if (tb.InvokeRequired)
-                return (string)tb.Invoke(new GetTextDelegate(GetText), tb);
-            return tb.Text;
+            if (c.InvokeRequired)
+                return (string)c.Invoke(new GetTextDelegate(GetText), c);
+            return c.Text;
         }
 
         private bool GetChecked(CheckBox cb)
@@ -79,6 +106,26 @@ namespace WinGrep
             if (cb.InvokeRequired)
                 return (bool)cb.Invoke(new GetCheckedDelegate(GetChecked), cb);
             return cb.Checked;
+        }
+
+        private void ClearListBox(ListBox lb)
+        {
+            if (lb.InvokeRequired)
+            {
+                lb.Invoke(new ClearListBoxDelegate(ClearListBox), lb);
+                return;
+            }
+            lb.Items.Clear();
+        }
+
+        private void AddListBoxItem(ListBox lb, object item)
+        {
+            if (lb.InvokeRequired)
+            {
+                lb.Invoke(new AddListBoxItemDelegate(AddListBoxItem), lb, item);
+                return;
+            }
+            lb.Items.Add(item);
         }
         #endregion Thread Safe Control Delegates
 
@@ -100,6 +147,7 @@ namespace WinGrep
                 var fileNamesOnly = GetChecked(ckJustFiles);
                 var line = string.Format("{0}{1}\r\n", e.FilePath, fileNamesOnly ? null : ":");
                 AppendText(txtResults, line);
+                AddListBoxItem(lbResults, line);
             }
         }
 
@@ -113,6 +161,7 @@ namespace WinGrep
                 var dispLineNum = GetChecked(ckLineNumbers);
                 var line = string.Format("  {0}{1}\r\n", !dispLineNum ? null : string.Format("{0}: ", e.LineNumber), e.Line);
                 AppendText(txtResults, line);
+                AddListBoxItem(lbResults, line);
             }
         }
 
@@ -131,7 +180,10 @@ namespace WinGrep
                     _totalLineMatches += e.MatchingLineCount;
                 }
                 if (!string.IsNullOrEmpty(line))
+                {
                     AppendText(txtResults, line);
+                    AddListBoxItem(lbResults, line);
+                }
             }
         }
 
@@ -142,9 +194,13 @@ namespace WinGrep
                 var err = (Exception)e.ExceptionObject;
                 var line = string.Format("{0}{1}\r\n", e.IsTerminating ? "Fatal Error: " : null, err.Message);
                 AppendText(txtResults, line);
+                AddListBoxItem(lbResults, line);
             }
             if (e.IsTerminating)
+            {
                 SetCursor(this, Cursors.Arrow);
+                SetText(btnSearch, StringConst.Search);
+            }
         }
 
         void GrepCanceled(object sender, EventArgs e)
@@ -155,8 +211,11 @@ namespace WinGrep
                 _totalLineMatches = 0;
                 var line = string.Format("Win Grep Canceled.\r\n");
                 SetText(txtResults, line);
+                ClearListBox(lbResults);
+                AddListBoxItem(lbResults, line);
             }
             SetCursor(this, Cursors.Arrow);
+            SetText(btnSearch, StringConst.Search);
         }
 
         void GrepComplete(object sender, EventArgs e)
@@ -168,13 +227,17 @@ namespace WinGrep
 
                 var line = string.Format("Win Grep Complete. {0} Total Matching File(s){1}", _totalFileMatches, !countLines ? null : string.Format(", {0} Total Matching Line(s)", _totalLineMatches));
                 AppendText(txtResults, line);
+                AddListBoxItem(lbResults, line);
             }
             SetCursor(this, Cursors.Arrow);
+            SetText(btnSearch, StringConst.Search);
         }
         #endregion Grep Search Events
 
         private void StartSearch()
         {
+            if (SearchState == SearchState.Searching)
+                return;
             var directory = txtDir.Text;
             if (!Directory.Exists(directory))
             {
@@ -197,11 +260,21 @@ namespace WinGrep
             Cursor = Cursors.WaitCursor;
             txtCurFile.Text = null;
             txtResults.Text = null;
+            ClearListBox(lbResults);
 
             var isRecursive = GetChecked(ckRecursive);
             var ignoreCase = GetChecked(ckIgnoreCase);
             var fileNamesOnly = GetChecked(ckJustFiles);
+            SetText(btnSearch, StringConst.Cancel);
+            SetCursor(btnSearch, Cursors.Arrow);
             _grepWorker.Start(directory, "*.*", extensions, pattern, isRecursive, ignoreCase, fileNamesOnly);
+        }
+
+        private void CancelSearch()
+        {
+            if (SearchState == SearchState.Idle)
+                return;
+            _grepWorker.Cancel();
         }
 
         private void BuildCheckedComboBoxItems(CheckComboBoxControl.CheckedComboBox cb)
@@ -300,7 +373,7 @@ namespace WinGrep
 
         private void tb_KeyDown_Search(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter && btnSearch.Enabled)
+            if (e.KeyCode == Keys.Enter && SearchState == SearchState.Idle)
                 StartSearch();
         }
 
@@ -313,12 +386,27 @@ namespace WinGrep
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            StartSearch();
+            switch (SearchState)
+            {
+                case WinGrep.SearchState.Idle:
+                    StartSearch();
+                    break;
+                case WinGrep.SearchState.Searching:
+                    CancelSearch();
+                    break;
+            }
         }
 
         private void ckJustFiles_Click(object sender, EventArgs e)
         {
             ckLineNumbers.Enabled = ckCountLines.Enabled = !ckJustFiles.Checked;
+        }
+
+        private void FormWinGrep_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (btnSearch.Enabled)
+                Properties.Settings.Default.FileExtensions = checkedComboBox1.Text;
+            Properties.Settings.Default.Save();
         }
     }
 }

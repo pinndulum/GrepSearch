@@ -81,6 +81,15 @@ namespace GrepSearch
                 grepComplete(sender, EventArgs.Empty);
         }
 
+        private async Task CancelAsync()
+        {
+            await Task.Yield();
+            if (_bgw == null)
+                return;
+            _bgw.CancelAsync();
+            _resetEvent.Wait();
+        }
+
         public void Start(string directory, string filePattern, string[] extentions, string regex, bool isRecursive, bool ignoreCase, bool fileNameOnly)
         {
             if (string.IsNullOrEmpty(directory))
@@ -91,20 +100,18 @@ namespace GrepSearch
                 throw new ArgumentNullException("regex");
 
             var workerData = new WorkerData { Directory = directory, FilePattern = filePattern, Extentions = extentions, RegEx = regex, IsRecursive = isRecursive, IgnoreCase = ignoreCase, FileNameOnly = fileNameOnly };
-            Task.Run(() =>
-            {
-                if (_bgw != null)
-                {
-                    _bgw.CancelAsync();
-                    _resetEvent.Wait();
-                }
-            }).ContinueWith(x =>
+            CancelAsync().ContinueWith(x =>
             {
                 _bgw = new BackgroundWorker { WorkerSupportsCancellation = true };
                 _bgw.DoWork += BackgroundWorker_DoWork;
                 _bgw.RunWorkerCompleted += BackgroundWorker_RunWorkerCompleted;
                 _bgw.RunWorkerAsync(workerData);
             });
+        }
+
+        public void Cancel()
+        {
+            Task.Run(() => CancelAsync());
         }
 
         void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
