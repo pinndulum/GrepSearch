@@ -33,7 +33,6 @@
             this.txtCurFile = new System.Windows.Forms.TextBox();
             this.btnBrowse = new System.Windows.Forms.Button();
             this.lblResults = new System.Windows.Forms.Label();
-            this.txtResults = new System.Windows.Forms.TextBox();
             this.lblSearchText = new System.Windows.Forms.Label();
             this.lblFiles = new System.Windows.Forms.Label();
             this.btnSearch = new System.Windows.Forms.Button();
@@ -86,22 +85,6 @@
             this.lblResults.TabIndex = 16;
             this.lblResults.Text = "Results";
             // 
-            // txtResults
-            // 
-            this.txtResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtResults.BackColor = System.Drawing.SystemColors.Info;
-            this.txtResults.Cursor = System.Windows.Forms.Cursors.Arrow;
-            this.txtResults.Location = new System.Drawing.Point(11, 204);
-            this.txtResults.Multiline = true;
-            this.txtResults.Name = "txtResults";
-            this.txtResults.ReadOnly = true;
-            this.txtResults.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtResults.Size = new System.Drawing.Size(472, 218);
-            this.txtResults.TabIndex = 17;
-            this.txtResults.WordWrap = false;
-            // 
             // lblSearchText
             // 
             this.lblSearchText.Location = new System.Drawing.Point(203, 54);
@@ -139,12 +122,14 @@
             // 
             // lbResults
             // 
+            this.lbResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.lbResults.FormattingEnabled = true;
-            this.lbResults.Location = new System.Drawing.Point(233, 279);
+            this.lbResults.Location = new System.Drawing.Point(11, 204);
             this.lbResults.Name = "lbResults";
-            this.lbResults.Size = new System.Drawing.Size(249, 147);
+            this.lbResults.Size = new System.Drawing.Size(472, 212);
             this.lbResults.TabIndex = 18;
-            this.lbResults.Visible = false;
             // 
             // checkedComboBox1
             // 
@@ -249,7 +234,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Inherit;
             this.ClientSize = new System.Drawing.Size(494, 434);
             this.Controls.Add(this.lbResults);
-            this.Controls.Add(this.txtResults);
             this.Controls.Add(this.checkedComboBox1);
             this.Controls.Add(this.ckJustFiles);
             this.Controls.Add(this.ckIgnoreCase);
@@ -286,7 +270,6 @@
         private System.Windows.Forms.TextBox txtCurFile;
         private System.Windows.Forms.Button btnBrowse;
         private System.Windows.Forms.Label lblResults;
-        private System.Windows.Forms.TextBox txtResults;
         private System.Windows.Forms.Label lblSearchText;
         private System.Windows.Forms.TextBox txtSearchText;
         private System.Windows.Forms.Label lblFiles;

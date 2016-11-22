@@ -41,8 +41,10 @@
   <ItemGroup>
     <Compile Include="GrepFileChangeEventArgs.cs" />
     <Compile Include="GrepFinishedFileEventArgs.cs" />
+    <Compile Include="GrepResult.cs" />
     <Compile Include="GrepResultEventArgs.cs" />
     <Compile Include="GrepWorker.cs" />
+    <Compile Include="LineResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

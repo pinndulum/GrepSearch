@@ -54,12 +54,15 @@ namespace WinGrep
 
         #region Thread Safe Control Delegates
         delegate void SetCursorDelegate(Control c, Cursor cursor);
-        delegate void AppendTextDelegate(TextBox tb, string text);
         delegate void SetTextDelegate(Control c, string text);
         delegate string GetTextDelegate(Control c);
+        delegate void AppendTextDelegate(TextBox tb, string text);
         delegate bool GetCheckedDelegate(CheckBox cb);
         delegate void ClearListBoxDelegate(ListBox lb);
         delegate void AddListBoxItemDelegate(ListBox lb, object item);
+        delegate int GetGrepResultItemIndexDelegate(ListBox lb, string filePath);
+        delegate GrepResult GetGrepResultItemDelegate(ListBox lb, string filePath);
+        delegate void RefreshListBoxItemDelegate(ListBox lb, int index);
 
         private void SetCursor(Control c, Cursor cursor)
         {
@@ -69,19 +72,6 @@ namespace WinGrep
                 return;
             }
             c.Cursor = cursor;
-        }
-
-        private void AppendText(TextBox tb, string text)
-        {
-            if (tb.InvokeRequired)
-            {
-                tb.Invoke(new AppendTextDelegate(AppendText), tb, text);
-                return;
-            }
-            tb.Text += text;
-            tb.SelectionStart = Math.Max(0, tb.Text.Length - 1);
-            tb.SelectionLength = 0;
-            tb.ScrollToCaret();
         }
 
         private void SetText(Control c, string text)
@@ -99,6 +89,19 @@ namespace WinGrep
             if (c.InvokeRequired)
                 return (string)c.Invoke(new GetTextDelegate(GetText), c);
             return c.Text;
+        }
+
+        private void AppendText(TextBox tb, string text)
+        {
+            if (tb.InvokeRequired)
+            {
+                tb.Invoke(new AppendTextDelegate(AppendText), tb, text);
+                return;
+            }
+            tb.Text += text;
+            tb.SelectionStart = Math.Max(0, tb.Text.Length - 1);
+            tb.SelectionLength = 0;
+            tb.ScrollToCaret();
         }
 
         private bool GetChecked(CheckBox cb)
@@ -127,6 +130,41 @@ namespace WinGrep
             }
             lb.Items.Add(item);
         }
+
+        private int GetGrepResultItemIndex(ListBox lb, string filePath)
+        {
+            if (lb.InvokeRequired)
+            {
+                return (int)lb.Invoke(new GetGrepResultItemIndexDelegate(GetGrepResultItemIndex), lb, filePath);
+            }
+            var grepResults = lb.Items.OfType<GrepResult>().Select((x, i) => new { Index = i, Result = x });
+            var grepResult = grepResults.FirstOrDefault(x => x.Result.FilePath == filePath);
+            return grepResult == null ? -1 : grepResult.Index;
+        }
+
+        private GrepResult GetGrepResultItem(ListBox lb, string filePath)
+        {
+            if (lb.InvokeRequired)
+            {
+                return (GrepResult)lb.Invoke(new GetGrepResultItemDelegate(GetGrepResultItem), lb, filePath);
+            }
+            var index = GetGrepResultItemIndex(lb, filePath);
+            return lb.Items.OfType<GrepResult>().ElementAtOrDefault(index);
+        }
+
+        private void RefreshListBoxItem(ListBox lb, int index)
+        {
+            if (lb.InvokeRequired)
+            {
+                lb.Invoke(new RefreshListBoxItemDelegate(RefreshListBoxItem), lb, index);
+                return;
+            }
+            var items = lb.Items.OfType<object>();
+            var count = items.Count();
+            if (count < 0 || index < 0 || index > count - 1)
+                return;
+            lb.Items[index] = lb.Items[index];
+        }
         #endregion Thread Safe Control Delegates
 
         #region Grep Search Events
@@ -145,9 +183,10 @@ namespace WinGrep
             {
                 _totalFileMatches++;
                 var fileNamesOnly = GetChecked(ckJustFiles);
-                var line = string.Format("{0}{1}\r\n", e.FilePath, fileNamesOnly ? null : ":");
-                AppendText(txtResults, line);
-                AddListBoxItem(lbResults, line);
+                var showLineNum = GetChecked(ckLineNumbers);
+                var showLineCount = fileNamesOnly ? false : GetChecked(ckCountLines);
+                var grepResult = new GrepResult(e.FilePath, fileNamesOnly, showLineNum, showLineCount);
+                AddListBoxItem(lbResults, grepResult);
             }
         }
 
@@ -155,13 +194,13 @@ namespace WinGrep
         {
             lock (_updatelock)
             {
-                var fileNamesOnly = GetChecked(ckJustFiles);
-                if (fileNamesOnly)
-                    return;
-                var dispLineNum = GetChecked(ckLineNumbers);
-                var line = string.Format("  {0}{1}\r\n", !dispLineNum ? null : string.Format("{0}: ", e.LineNumber), e.Line);
-                AppendText(txtResults, line);
-                AddListBoxItem(lbResults, line);
+                var grepResult = GetGrepResultItem(lbResults, e.FilePath);
+                if (grepResult != null)
+                {
+                    grepResult[e.LineNumber] = e.Line;
+                    var index = GetGrepResultItemIndex(lbResults, e.FilePath);
+                    RefreshListBoxItem(lbResults, index);
+                }
             }
         }
 
@@ -170,20 +209,10 @@ namespace WinGrep
             SetCursor(this, Cursors.WaitCursor);
             lock (_updatelock)
             {
-                var fileNamesOnly = GetChecked(ckJustFiles);
-                var countLines = fileNamesOnly ? false : GetChecked(ckCountLines);
-                var line = string.Empty;
                 if (e.MatchingLineCount > 0)
-                {
-                    if (countLines)
-                        line += string.Format("  {0} Matching Line(s)\r\n", e.MatchingLineCount);
                     _totalLineMatches += e.MatchingLineCount;
-                }
-                if (!string.IsNullOrEmpty(line))
-                {
-                    AppendText(txtResults, line);
-                    AddListBoxItem(lbResults, line);
-                }
+                var index = GetGrepResultItemIndex(lbResults, e.FilePath);
+                RefreshListBoxItem(lbResults, index);
             }
         }
 
@@ -193,7 +222,6 @@ namespace WinGrep
             {
                 var err = (Exception)e.ExceptionObject;
                 var line = string.Format("{0}{1}\r\n", e.IsTerminating ? "Fatal Error: " : null, err.Message);
-                AppendText(txtResults, line);
                 AddListBoxItem(lbResults, line);
             }
             if (e.IsTerminating)
@@ -210,7 +238,6 @@ namespace WinGrep
                 _totalFileMatches = 0;
                 _totalLineMatches = 0;
                 var line = string.Format("Win Grep Canceled.\r\n");
-                SetText(txtResults, line);
                 ClearListBox(lbResults);
                 AddListBoxItem(lbResults, line);
             }
@@ -226,7 +253,6 @@ namespace WinGrep
                 var countLines = fileNamesOnly ? false : GetChecked(ckCountLines);
 
                 var line = string.Format("Win Grep Complete. {0} Total Matching File(s){1}", _totalFileMatches, !countLines ? null : string.Format(", {0} Total Matching Line(s)", _totalLineMatches));
-                AppendText(txtResults, line);
                 AddListBoxItem(lbResults, line);
             }
             SetCursor(this, Cursors.Arrow);
@@ -259,7 +285,7 @@ namespace WinGrep
             _totalLineMatches = 0;
             Cursor = Cursors.WaitCursor;
             txtCurFile.Text = null;
-            txtResults.Text = null;
+            //txtResults.Text = null;
             ClearListBox(lbResults);
 
             var isRecursive = GetChecked(ckRecursive);
