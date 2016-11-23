@@ -125,11 +125,14 @@
             this.lbResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.lbResults.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
             this.lbResults.FormattingEnabled = true;
             this.lbResults.Location = new System.Drawing.Point(11, 204);
             this.lbResults.Name = "lbResults";
             this.lbResults.Size = new System.Drawing.Size(472, 212);
             this.lbResults.TabIndex = 18;
+            this.lbResults.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.lbResults_DrawItem);
+            this.lbResults.MeasureItem += new System.Windows.Forms.MeasureItemEventHandler(this.lbResults_MeasureItem);
             // 
             // checkedComboBox1
             // 

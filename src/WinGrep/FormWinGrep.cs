@@ -285,7 +285,6 @@ namespace WinGrep
             _totalLineMatches = 0;
             Cursor = Cursors.WaitCursor;
             txtCurFile.Text = null;
-            //txtResults.Text = null;
             ClearListBox(lbResults);
 
             var isRecursive = GetChecked(ckRecursive);
@@ -426,6 +425,49 @@ namespace WinGrep
         private void ckJustFiles_Click(object sender, EventArgs e)
         {
             ckLineNumbers.Enabled = ckCountLines.Enabled = !ckJustFiles.Checked;
+        }
+
+        // https: //msdn.microsoft.com/en-us/library/system.windows.forms.listbox.drawitem.aspx
+        // https: //msdn.microsoft.com/en-us/library/system.windows.forms.listbox.measureitem.aspx
+        private void lbResults_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            var lb = sender as ListBox;
+            var lbi = lb.Items[e.Index];
+
+            e.DrawBackground(); // Draw the background of the ListBox control for each item.
+
+            //e.Graphics.MeasureString
+
+            var myBrush = System.Drawing.Brushes.Black; // Define the default color of the brush as black.
+            // Determine the color of the brush to draw each item based on the index of the item to draw.
+            switch (e.Index)
+            {
+                case 0:
+                    myBrush = System.Drawing.Brushes.Red;
+                    break;
+                case 1:
+                    myBrush = System.Drawing.Brushes.Orange;
+                    break;
+                case 2:
+                    myBrush = System.Drawing.Brushes.Purple;
+                    break;
+            }
+
+            // Draw the current item text based on the current Font and the custom brush settings.
+            e.Graphics.DrawString(lbi.ToString(), e.Font, myBrush, e.Bounds, System.Drawing.StringFormat.GenericDefault);
+
+            // If the ListBox has focus, draw a focus rectangle around the selected item.
+            e.DrawFocusRectangle();
+        }
+
+        private void lbResults_MeasureItem(object sender, MeasureItemEventArgs e)
+        {
+            var lb = sender as ListBox;
+            var lbi = lb.Items[e.Index];
+            var text = lbi.ToString();
+            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            //var size = e.Graphics.MeasureString(lines[0], lb.Font).ToSize();
+            e.ItemHeight *= lines.Count();
         }
 
         private void FormWinGrep_FormClosing(object sender, FormClosingEventArgs e)
