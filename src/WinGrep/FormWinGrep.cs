@@ -1,8 +1,10 @@
 ﻿using GrepSearch;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 
 namespace WinGrep
@@ -59,10 +61,11 @@ namespace WinGrep
         delegate void AppendTextDelegate(TextBox tb, string text);
         delegate bool GetCheckedDelegate(CheckBox cb);
         delegate void ClearListBoxDelegate(ListBox lb);
-        delegate void AddListBoxItemDelegate(ListBox lb, object item);
-        delegate int GetGrepResultItemIndexDelegate(ListBox lb, string filePath);
-        delegate GrepResult GetGrepResultItemDelegate(ListBox lb, string filePath);
-        delegate void RefreshListBoxItemDelegate(ListBox lb, int index);
+        delegate void AddListBoxItemDelegate<T>(ListBox lb, T item);
+        delegate void RefreshListBoxItemIndexDelegate<T>(ListBox lb, int index);
+        delegate void RefreshListBoxItemDelegate<T>(ListBox lb, T item);
+        delegate int GetListBoxItemIndexDelegate<T>(ListBox lb, Predicate<T> predicate);
+        delegate T GetListBoxItemDelegate<T>(ListBox lb, Predicate<T> predicate);
 
         private void SetCursor(Control c, Cursor cursor)
         {
@@ -121,49 +124,56 @@ namespace WinGrep
             lb.Items.Clear();
         }
 
-        private void AddListBoxItem(ListBox lb, object item)
+        private void AddListBoxItem<T>(ListBox lb, T item)
         {
             if (lb.InvokeRequired)
             {
-                lb.Invoke(new AddListBoxItemDelegate(AddListBoxItem), lb, item);
+                lb.Invoke(new AddListBoxItemDelegate<T>(AddListBoxItem<T>), lb, item);
                 return;
             }
             lb.Items.Add(item);
         }
 
-        private int GetGrepResultItemIndex(ListBox lb, string filePath)
+        private void RefreshListBoxItem<T>(ListBox lb, int index)
         {
             if (lb.InvokeRequired)
             {
-                return (int)lb.Invoke(new GetGrepResultItemIndexDelegate(GetGrepResultItemIndex), lb, filePath);
-            }
-            var grepResults = lb.Items.OfType<GrepResult>().Select((x, i) => new { Index = i, Result = x });
-            var grepResult = grepResults.FirstOrDefault(x => x.Result.FilePath == filePath);
-            return grepResult == null ? -1 : grepResult.Index;
-        }
-
-        private GrepResult GetGrepResultItem(ListBox lb, string filePath)
-        {
-            if (lb.InvokeRequired)
-            {
-                return (GrepResult)lb.Invoke(new GetGrepResultItemDelegate(GetGrepResultItem), lb, filePath);
-            }
-            var index = GetGrepResultItemIndex(lb, filePath);
-            return lb.Items.OfType<GrepResult>().ElementAtOrDefault(index);
-        }
-
-        private void RefreshListBoxItem(ListBox lb, int index)
-        {
-            if (lb.InvokeRequired)
-            {
-                lb.Invoke(new RefreshListBoxItemDelegate(RefreshListBoxItem), lb, index);
+                lb.Invoke(new RefreshListBoxItemIndexDelegate<T>(RefreshListBoxItem<T>), lb, index);
                 return;
             }
-            var items = lb.Items.OfType<object>();
+            var items = lb.Items.OfType<T>();
             var count = items.Count();
             if (count < 0 || index < 0 || index > count - 1)
                 return;
             lb.Items[index] = lb.Items[index];
+        }
+
+        private void RefreshListBoxItem<T>(ListBox lb, T item)
+        {
+            if (lb.InvokeRequired)
+            {
+                lb.Invoke(new RefreshListBoxItemDelegate<T>(RefreshListBoxItem<T>), lb, item);
+                return;
+            }
+            var index = GetListBoxItemIndex<T>(lb, x => x.Equals(item));
+            RefreshListBoxItem<T>(lb, index);
+        }
+
+        private int GetListBoxItemIndex<T>(ListBox lb, Predicate<T> predicate)
+        {
+            if (lb.InvokeRequired)
+                return (int)lb.Invoke(new GetListBoxItemIndexDelegate<T>(GetListBoxItemIndex<T>), lb, predicate);
+            var items = lb.Items.OfType<T>().Select((x, i) => new { Index = i, Result = x });
+            var item = items.FirstOrDefault(x => predicate(x.Result));
+            return item == null ? -1 : item.Index;
+        }
+
+        private T GetListBoxItem<T>(ListBox lb, Predicate<T> predicate)
+        {
+            if (lb.InvokeRequired)
+                return (T)lb.Invoke(new GetListBoxItemDelegate<T>(GetListBoxItem<T>), lb, predicate);
+            var index = GetListBoxItemIndex<T>(lb, x => predicate(x));
+            return lb.Items.OfType<T>().ElementAtOrDefault(index);
         }
         #endregion Thread Safe Control Delegates
 
@@ -194,12 +204,11 @@ namespace WinGrep
         {
             lock (_updatelock)
             {
-                var grepResult = GetGrepResultItem(lbResults, e.FilePath);
+                var grepResult = GetListBoxItem<GrepResult>(lbResults, x => x.FilePath == e.FilePath);
                 if (grepResult != null)
                 {
                     grepResult[e.LineNumber] = e.Line;
-                    var index = GetGrepResultItemIndex(lbResults, e.FilePath);
-                    RefreshListBoxItem(lbResults, index);
+                    RefreshListBoxItem<GrepResult>(lbResults, grepResult);
                 }
             }
         }
@@ -211,8 +220,8 @@ namespace WinGrep
             {
                 if (e.MatchingLineCount > 0)
                     _totalLineMatches += e.MatchingLineCount;
-                var index = GetGrepResultItemIndex(lbResults, e.FilePath);
-                RefreshListBoxItem(lbResults, index);
+                var index = GetListBoxItemIndex<GrepResult>(lbResults, x => x.FilePath == e.FilePath);
+                RefreshListBoxItem<GrepResult>(lbResults, index);
             }
         }
 
@@ -427,36 +436,17 @@ namespace WinGrep
             ckLineNumbers.Enabled = ckCountLines.Enabled = !ckJustFiles.Checked;
         }
 
-        // https: //msdn.microsoft.com/en-us/library/system.windows.forms.listbox.drawitem.aspx
-        // https: //msdn.microsoft.com/en-us/library/system.windows.forms.listbox.measureitem.aspx
         private void lbResults_DrawItem(object sender, DrawItemEventArgs e)
         {
+            if (e.Index < 0)
+                return;
             var lb = sender as ListBox;
             var lbi = lb.Items[e.Index];
-
-            e.DrawBackground(); // Draw the background of the ListBox control for each item.
-
-            //e.Graphics.MeasureString
-
-            var myBrush = System.Drawing.Brushes.Black; // Define the default color of the brush as black.
-            // Determine the color of the brush to draw each item based on the index of the item to draw.
-            switch (e.Index)
-            {
-                case 0:
-                    myBrush = System.Drawing.Brushes.Red;
-                    break;
-                case 1:
-                    myBrush = System.Drawing.Brushes.Orange;
-                    break;
-                case 2:
-                    myBrush = System.Drawing.Brushes.Purple;
-                    break;
-            }
-
-            // Draw the current item text based on the current Font and the custom brush settings.
-            e.Graphics.DrawString(lbi.ToString(), e.Font, myBrush, e.Bounds, System.Drawing.StringFormat.GenericDefault);
-
-            // If the ListBox has focus, draw a focus rectangle around the selected item.
+            var backcolor = e.Index % 2 == 0 ? e.BackColor : System.Drawing.Color.LightGray;
+            if (backcolor != e.BackColor)
+                e = new DrawItemEventArgs(e.Graphics, e.Font, e.Bounds, e.Index, e.State, e.ForeColor, backcolor);
+            e.DrawBackground();
+            e.Graphics.DrawString(lbi.ToString(), e.Font, System.Drawing.Brushes.Black, e.Bounds, System.Drawing.StringFormat.GenericDefault);
             e.DrawFocusRectangle();
         }
 
@@ -464,10 +454,47 @@ namespace WinGrep
         {
             var lb = sender as ListBox;
             var lbi = lb.Items[e.Index];
-            var text = lbi.ToString();
-            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            //var size = e.Graphics.MeasureString(lines[0], lb.Font).ToSize();
-            e.ItemHeight *= lines.Count();
+            var size = e.Graphics.MeasureString(lbi.ToString(), lb.Font).ToSize();
+            e.ItemHeight = size.Height;
+        }
+
+        private void lbResults_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            var lb = sender as ListBox;
+            var index = lb.IndexFromPoint(e.Location);
+            if (index == ListBox.NoMatches)
+                return;
+            var item = lb.Items[index] as GrepResult;
+            if (item == null)
+                return;
+            Process.Start("explorer.exe", "/select, " + item.FilePath);
+        }
+
+        private void lbResults_KeyDown(object sender, KeyEventArgs e)
+        {
+            var lb = sender as ListBox;
+            if (e.Control)
+            {
+                e.SuppressKeyPress = true;
+                switch (e.KeyCode)
+                {
+                    case Keys.A:
+                        for (var i = 0; i < lb.Items.Count; i++)
+                            lb.SetSelected(i, true);
+                        break;
+                    case Keys.C:
+                        var sb = new StringBuilder();
+                        foreach (var item in lb.SelectedItems)
+                            sb.AppendFormat("{0}\r\n", item);
+                        var text = sb.ToString();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            Clipboard.Clear();
+                            Clipboard.SetText(text);
+                        }
+                        break;
+                }
+            }
         }
 
         private void FormWinGrep_FormClosing(object sender, FormClosingEventArgs e)
