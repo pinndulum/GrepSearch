@@ -31,6 +31,7 @@ namespace WinGrep
         {
             InitializeComponent();
 
+            ckLineNumbers.Enabled = ckCountLines.Enabled = !ckJustFiles.Checked;
             btnSearch.Enabled = !string.IsNullOrWhiteSpace(txtDir.Text) && !string.IsNullOrWhiteSpace(txtSearchText.Text);
             if (btnSearch.Enabled)
             {
